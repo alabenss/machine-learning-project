@@ -25,6 +25,8 @@ import numpy as np
 import pandas as pd
 import wbdata
 from pathlib import Path
+import sys
+sys.stdout.reconfigure(encoding='utf-8')
 
 # =============================================================================
 # 0. CONFIGURATION
@@ -82,9 +84,13 @@ product_codes = pd.read_csv(
 )
 
 # Numeric code → ISO3 crosswalk (used ONCE in Step 2, then carried forward)
+
 crosswalk = country_codes[[
-    'country_code', 'iso_3digit_alpha', 'country_name_abbreviation'
+    'country_code',
+    'country_iso3',
+    'country_name'
 ]].copy()
+
 crosswalk.columns = ['country_code', 'iso3', 'country_name']
 
 
@@ -458,17 +464,18 @@ elif pos_rate > 0.40:
 print("\n── Step 8: Merging GeoDist ──")
 
 if GEODIST_PATH.exists():
-    geodist = pd.read_csv(GEODIST_PATH, encoding='latin-1')
+    geodist = pd.read_excel(GEODIST_PATH)  # <- change here
+
     geodist_alg = geodist[geodist['iso_o'] == ALG_ISO3][[
         'iso_d', 'dist', 'distw', 'contig',
         'comlang_off', 'comlang_ethno', 'colony', 'comcol', 'smctry'
     ]].copy()
+
     geodist_alg.columns = [
         'iso3', 'dist_km', 'distw_km', 'contig',
         'comlang_off', 'comlang_ethno', 'colony', 'comcol', 'smctry'
     ]
 
-    # iso3 already exists on master — merge directly, no crosswalk needed
     master = master.merge(geodist_alg, on='iso3', how='left')
 
     coverage = master['dist_km'].notna().mean() * 100
@@ -483,12 +490,15 @@ else:
 
 
 # =============================================================================
-# 9. LOAD & MERGE WORLD BANK (via wbdata API)
+# 9. LOAD & MERGE WORLD BANK (direct REST API — no wbdata dependency)
 # =============================================================================
-# FIX vs v1: explicit rename() replaces positional column assignment.
-# iso3 already on master — merge on ['t', 'iso3'] directly.
+# wbdata >= 0.3 returns full country names instead of ISO3 codes, making
+# merges impossible. The World Bank REST API returns countryiso3code directly,
+# which matches BACI's crosswalk exactly.
 
 print("\n── Step 9: Fetching World Bank indicators ──")
+
+import requests
 
 WB_INDICATORS = {
     'NY.GDP.MKTP.CD': 'gdp_usd',
@@ -497,16 +507,57 @@ WB_INDICATORS = {
     'NY.GDP.PCAP.CD': 'gdp_per_capita',
 }
 
+def fetch_wb_indicator(indicator_code, col_name, years):
+    """
+    Fetch a single World Bank indicator for all countries over a year range.
+    Returns a tidy DataFrame with columns: iso3, t, <col_name>.
+    """
+    url = (
+        f"https://api.worldbank.org/v2/country/all/indicator/{indicator_code}"
+        f"?format=json&per_page=20000&date={min(years)}:{max(years)}"
+    )
+    try:
+        resp = requests.get(url, timeout=30)
+        resp.raise_for_status()
+        payload = resp.json()
+
+        # payload[0] = metadata, payload[1] = data records
+        if len(payload) < 2 or not payload[1]:
+            print(f"  WARNING: No data returned for {indicator_code}")
+            return pd.DataFrame(columns=['iso3', 't', col_name])
+
+        rows = [
+            {
+                'iso3': rec['countryiso3code'],
+                't':    int(rec['date']),
+                col_name: rec['value'],  # None stays None → becomes NaN on merge
+            }
+            for rec in payload[1]
+            if rec.get('countryiso3code')   # skip aggregates (no ISO3)
+        ]
+        df = pd.DataFrame(rows)
+        df = df[df['t'].isin(years)]       # keep only requested years
+        return df
+
+    except Exception as e:
+        print(f"  WARNING: fetch failed for {indicator_code} ({e})")
+        return pd.DataFrame(columns=['iso3', 't', col_name])
+
 try:
-    wb_raw = wbdata.get_dataframe(WB_INDICATORS, convert_date=False)
-    wb_raw = wb_raw.reset_index()
+    frames_wb = [
+        fetch_wb_indicator(ind_code, col_name, YEARS)
+        for ind_code, col_name in WB_INDICATORS.items()
+    ]
 
-    # FIX: explicit rename — never assume column position from reset_index()
-    wb_raw = wb_raw.rename(columns={'country': 'iso3', 'date': 't'})
-    wb_raw = wb_raw.rename(columns=WB_INDICATORS)
+    # Merge all indicators on (iso3, t)
+    wb_raw = frames_wb[0]
+    for f in frames_wb[1:]:
+        wb_raw = wb_raw.merge(f, on=['iso3', 't'], how='outer')
 
-    wb_raw['t'] = wb_raw['t'].astype(int)
-    wb_raw = wb_raw[wb_raw['t'].isin(YEARS)]
+    print(f"  Sample iso3 from World Bank: {wb_raw['iso3'].dropna().unique()[:5]}")
+    print(f"  Sample iso3 from master:     {master['iso3'].dropna().unique()[:5]}")
+    print(f"  World Bank rows fetched: {len(wb_raw):,}  "
+          f"({wb_raw['iso3'].nunique()} countries × {wb_raw['t'].nunique()} years)")
 
     master = master.merge(
         wb_raw[['t', 'iso3', 'gdp_usd', 'population', 'trade_pct_gdp', 'gdp_per_capita']],
@@ -521,7 +572,8 @@ try:
     print(f"  World Bank merged — missing GDP: {pct_missing_gdp:.1f}%")
     if pct_missing_gdp > 20:
         unmatched_wb = master[master['gdp_usd'].isna()]['iso3'].value_counts().head(10)
-        print(f"  Top unmatched iso3:\n{unmatched_wb.to_string()}")
+        print(f"  Top unmatched iso3 (likely small territories with no WB data):\n"
+              f"{unmatched_wb.to_string()}")
 
 except Exception as e:
     print(f"  WARNING: World Bank fetch failed ({e}) — skipping")
@@ -539,21 +591,33 @@ print("\n── Step 10: Merging UNCTAD diversification ──")
 if UNCTAD_PATH.exists():
     unctad = pd.read_csv(UNCTAD_PATH)
 
+    # ── Normalise column names ────────────────────────────────────────────────
+    # The file may be either:
+    #   (A) Pre-processed (already has: t, hhi_export, diversification_index)
+    #       — your current unctad_diversification.csv is in this format.
+    #   (B) Raw UNCTAD download (has: Economy, Year, long descriptive headers)
+    #       — handled by col_map below.
     col_map = {
-        'Economy': 'economy',
-        'Year':    't',
+        'Economy':    'economy',
+        'Year':       't',
         'Herfindahl-Hirschman Index, exports, normalized': 'hhi_export',
         'Herfindahl-Hirschman Index, imports, normalized': 'hhi_import',
-        'Diversification index, exports': 'diversification_index',
+        'Diversification index, exports':                  'diversification_index',
     }
     unctad = unctad.rename(columns={k: v for k, v in col_map.items() if k in unctad.columns})
 
+    # ── Filter to Algeria rows only if the file is multi-country ─────────────
+    # If neither 'economy' nor 'iso3' column exists, the file is already
+    # Algeria-only (format A) — skip the filter entirely.
     if 'economy' in unctad.columns:
-        unctad_alg = unctad[unctad['economy'].str.upper().str.contains('ALGERIA', na=False)]
+        unctad_alg = unctad[unctad['economy'].str.upper().str.contains('ALGERIA', na=False)].copy()
+    elif 'iso3' in unctad.columns:
+        unctad_alg = unctad[unctad['iso3'] == ALG_ISO3].copy()
     else:
-        unctad_alg = unctad[unctad['iso3'] == ALG_ISO3]
+        # File is already Algeria-only — use as-is
+        unctad_alg = unctad.copy()
 
-    # FIX vs v1: hard validation — fail loudly instead of silently producing NaN
+    # ── Hard validation ───────────────────────────────────────────────────────
     expected_cols = {'t', 'hhi_export', 'diversification_index'}
     missing_cols  = expected_cols - set(unctad_alg.columns)
     if missing_cols:
@@ -746,6 +810,8 @@ print("\n  All checks passed." if all_passed else "\n  Some checks FAILED — re
 # =============================================================================
 
 OUTPUT_PATH.parent.mkdir(parents=True, exist_ok=True)
+# Remove duplicate columns (keep first occurrence)
+master = master.loc[:, ~master.columns.duplicated()]
 master.to_parquet(OUTPUT_PATH, index=False)
 print(f"\n── Saved to {OUTPUT_PATH} ──")
 print(master.dtypes.to_string())
