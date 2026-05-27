@@ -52,7 +52,7 @@ SOURCES = [
 def load_csv(csv_path: Path, text_columns: list[str]) -> pd.DataFrame | None:
     """Read a CSV, forcing any present text_columns to str dtype."""
     if not csv_path.exists():
-        print(f"  WARNING: {csv_path} not found — skipping.")
+        print(f"  WARNING: {csv_path} not found - skipping.")
         return None
 
     # Peek at column names to build dtype map only for columns that exist
@@ -78,7 +78,7 @@ def main() -> None:
 
             df.to_sql(table_name, conn, if_exists="replace", index=False)
             row_count = len(df)
-            print(f"  Imported {row_count:,} rows → table '{table_name}'")
+            print(f"  Imported {row_count:,} rows -> table '{table_name}'")
             imported += 1
 
         conn.commit()
