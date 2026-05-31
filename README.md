@@ -1,37 +1,199 @@
-# Machine Learning Project
+# Forecasting and Identifying Global Export Opportunities for Algerian Exporters
 
-## Forecasting And Dashboard
+This project builds an end-to-end machine learning decision-support system for identifying promising non-hydrocarbon export opportunities for Algeria. It combines international trade data, geographic indicators, macroeconomic features, clustering, classification, forecasting, and professional dashboarding.
 
-This part of the project forecasts future partner-market demand for Algerian export opportunities and presents the forecasting, clustering, and classification results in dashboards.
+The final objective is practical: help CACI, exporters, and policymakers prioritize countries, products, and sectors where global demand is strong, Algeria's current penetration is low, and future demand is expected to grow.
 
-Grafana is the professional dashboard used for the final demo because it satisfies the project PDF requirement for a professional visualization dashboard. Streamlit is kept as a backup/live Python dashboard that can open the same forecast, clustering, and classification outputs if the Grafana setup fails.
+## Project Highlights
 
-## Main Files
+- Integrates BACI bilateral trade data, CEPII GeoDist, World Bank indicators, and UNCTAD diversification data.
+- Builds a master HS6 country-product-year panel for Algeria-focused export opportunity analysis.
+- Performs EDA and exports dashboard-ready historical summaries.
+- Clusters countries, products, and sectors into interpretable strategic segments.
+- Classifies country-product pairs into Low, Medium, and High opportunity classes.
+- Forecasts partner-market import demand for 2024-2026 using baselines and machine learning regressors.
+- Exports all model outputs into SQLite for Grafana.
+- Provides a Streamlit + Plotly backup dashboard for live Python exploration.
+- Includes a polished project report with model results, figures, and dashboard explanation.
 
-- `forecasting_pipeline.py`
-- `notebooks/07_forecasting.ipynb`
-- `grafana/export_to_sqlite.py`
-- `grafana/README.md`
-- `dashboard/app.py`
-- `dashboard/README.md`
-- `docs/forecasting_dashboard_explanation.md`
-- `docs/forecasting_dashboard_presentation_script.md`
+## Repository Structure
 
-## Generate Forecast Outputs
+```text
+.
+|-- build_master_df.py
+|-- forecasting_pipeline.py
+|-- requirements.txt
+|-- README.md
+|-- ML_Report_Algerian_Export_Opportunities_forecasting_dashboard_checked.docx
+|-- notebooks/
+|   |-- 01_build_master_dataset.ipynb
+|   |-- 02_data_cleaning_eda.ipynb
+|   |-- 04_classification.ipynb
+|   |-- 05_clustering.ipynb
+|   `-- 07_forecasting.ipynb
+|-- dashboard/
+|   |-- app.py
+|   `-- README.md
+|-- grafana/
+|   |-- export_to_sqlite.py
+|   `-- README.md
+|-- docs/
+|   |-- forecasting_dashboard_explanation.md
+|   `-- forecasting_dashboard_presentation_script.md
+`-- data/
+    |-- baci/
+    |-- geodist/
+    |-- unctad/
+    |-- modeling/
+    |-- eda_outputs/
+    |-- clustering_outputs/
+    |-- classification_outputs/
+    |-- forecast_outputs/
+    `-- grafana/
+```
 
-From the project root:
+## Main Workflow
+
+Run the project in notebook order when rebuilding from raw or intermediate data:
+
+| Step | File | Purpose | Main Output |
+|---|---|---|---|
+| 1 | `notebooks/01_build_master_dataset.ipynb` or `build_master_df.py` | Integrate raw trade, geographic, macroeconomic, and diversification data | `data/master_df.parquet` |
+| 2 | `notebooks/02_data_cleaning_eda.ipynb` | Clean data, create train/validation/test splits, export EDA summaries | `data/modeling/`, `data/eda_outputs/` |
+| 3 | `notebooks/04_classification.ipynb` | Train opportunity classifiers and rank High Opportunity pairs | `data/classification_outputs/` |
+| 4 | `notebooks/05_clustering.ipynb` | Segment countries, products, and sectors | `data/clustering_outputs/` |
+| 5 | `notebooks/07_forecasting.ipynb` or `forecasting_pipeline.py` | Forecast future partner import demand and score forecast opportunities | `data/forecast_outputs/` |
+| 6 | `grafana/export_to_sqlite.py` | Convert model outputs into a Grafana-ready SQLite database | `data/grafana/export_opportunities.db` |
+| 7 | `dashboard/app.py` | Launch backup Streamlit dashboard | Local Streamlit app |
+
+## Installation
+
+Create and activate a Python environment, then install dependencies:
+
+```powershell
+pip install -r requirements.txt
+```
+
+The key Python dependencies are:
+
+- `pandas`
+- `numpy`
+- `scikit-learn`
+- `statsmodels`
+- `pyarrow`
+- `streamlit`
+- `plotly`
+- `matplotlib`
+
+`statsmodels` enables the optional ARIMA forecasting comparator. If it is not installed, the forecasting pipeline skips ARIMA safely and records that note in `forecast_model_metrics.csv`.
+
+## Data Inputs
+
+The project expects data under `data/`, including:
+
+- `data/baci/` - BACI bilateral trade files and lookup tables.
+- `data/geodist/` - CEPII GeoDist country-pair features.
+- `data/unctad/` - UNCTAD diversification indicators.
+- `data/master_df.parquet` - integrated modeling dataset generated by the first pipeline step.
+
+The master dataset is built at country-product-year grain:
+
+```text
+year x exporter/importer country x HS6 product
+```
+
+The analysis focuses on Algerian export opportunity identification, using global demand, partner import demand, Algeria's current export penetration, RCA, geographic indicators, macroeconomic variables, and lagged historical signals.
+
+## Modeling Tasks
+
+### 1. Clustering
+
+Clustering segments the opportunity space into interpretable strategic groups:
+
+- Country clustering: partner market segments.
+- Product clustering: HS6 product demand tiers.
+- Sector clustering: HS2 sector-level opportunity groups.
+- Cross-cluster analysis: opportunity density between country and product clusters.
+
+Main outputs:
+
+- `data/clustering_outputs/country_clusters.csv`
+- `data/clustering_outputs/product_clusters.csv`
+- `data/clustering_outputs/sector_clusters.csv`
+- `data/clustering_outputs/cluster_evaluation_summary.csv`
+- `data/clustering_outputs/priority_market_ranking.csv`
+- `data/clustering_outputs/cross_cluster_opportunity.csv`
+- PNG diagnostic plots for PCA, heatmaps, dendrograms, optimal-k curves, and priority rankings.
+
+Current evaluation summary:
+
+| Task | Best Reported Model | Silhouette |
+|---|---:|---:|
+| Country | Agglomerative Ward (k=3) | 0.7403 |
+| Product | Agglomerative Ward (k=4) | 0.8707 |
+| Sector | Agglomerative Ward (k=3) | 0.9395 |
+
+K-Means assignments are also retained because centroids are easier to interpret and use in dashboard summaries.
+
+### 2. Classification
+
+Classification assigns each country-product observation to an opportunity class:
+
+- Low / No Opportunity
+- Medium Opportunity
+- High Opportunity
+
+The notebook compares Logistic Regression, Random Forest, XGBoost, and LightGBM on a time-based held-out test set.
+
+Main outputs:
+
+- `data/classification_outputs/model_comparison.csv`
+- `data/classification_outputs/predictions_2023.csv`
+- `data/classification_outputs/top_export_opportunities.csv`
+- `data/classification_outputs/opp_by_country_predicted.csv`
+- `data/classification_outputs/opp_by_product_predicted.csv`
+- `data/classification_outputs/feature_importance_consensus.csv`
+- PNG plots for model comparison, confusion matrices, feature importance, class distribution, and ranked opportunities.
+
+Current model comparison:
+
+| Model | Accuracy | Macro Precision | Macro Recall | Macro F1 |
+|---|---:|---:|---:|---:|
+| Logistic Regression | 0.6524 | 0.5366 | 0.7384 | 0.5595 |
+| Random Forest | 0.9100 | 0.8074 | 0.9330 | 0.8591 |
+| XGBoost | 0.9062 | 0.7976 | 0.9305 | 0.8511 |
+| LightGBM | 0.9468 | 0.9145 | 0.9029 | 0.9083 |
+
+LightGBM is the best classifier by macro F1 and overall accuracy.
+
+### 3. Forecasting
+
+Forecasting predicts partner import demand (`partner_import_v`) for selected non-hydrocarbon country-product pairs over a three-year horizon:
+
+```text
+2024-2026
+```
+
+The target is partner-market import demand, not Algeria's own exports. This is deliberate: forecasting Algeria's historical exports would mostly reproduce current supply constraints, while forecasting partner demand identifies markets where opportunity may exist even if Algeria is not yet present.
+
+The forecasting pipeline compares:
+
+- Naive last-value baseline.
+- Three-year moving average baseline.
+- Trend-adjusted naive baseline.
+- Simple exponential smoothing.
+- Optional ARIMA when `statsmodels` is available.
+- Random Forest regressor.
+- Gradient Boosting regressor.
+- HistGradientBoosting regressor.
+
+Run forecasting:
 
 ```powershell
 python forecasting_pipeline.py
 ```
 
-Or run:
-
-```text
-notebooks/07_forecasting.ipynb
-```
-
-Forecast outputs are saved in:
+Main outputs:
 
 - `data/forecast_outputs/final_forecasts.csv`
 - `data/forecast_outputs/forecast_model_metrics.csv`
@@ -41,23 +203,62 @@ Forecast outputs are saved in:
 - `data/forecast_outputs/priority_products.csv`
 - `data/forecast_outputs/plots/`
 
-## Convert Dashboard CSV Files To SQLite
+Current forecasting result:
 
-Grafana reads a SQLite database created from the forecast, clustering, and classification CSV outputs.
+| Selected Model | MAE | RMSE | MAPE | sMAPE | WMAPE |
+|---|---:|---:|---:|---:|---:|
+| Random Forest | 1,357,026 | 2,928,567 | 39.11% | 19.54% | 15.19% |
 
-Run:
+Random Forest is selected because it achieves the lowest RMSE on the time-based test set while outperforming the naive baseline. XGBoost is a valid future extension, but it should be evaluated under the same temporal split and baseline comparisons before replacing the selected model.
+
+## Forecast Opportunity Score
+
+The forecast opportunity score ranks future country-product-year observations using:
+
+```text
+score =
+0.40 x normalized_forecasted_demand
++ 0.25 x normalized_predicted_growth_rate
++ 0.20 x normalized_global_demand_rank
++ 0.10 x normalized_rca
++ 0.05 x low_market_penetration_score
+```
+
+The score emphasizes:
+
+- high future demand,
+- positive predicted growth,
+- strong global demand,
+- Algeria's comparative advantage where available,
+- low current Algerian market penetration.
+
+The ranking is saved in:
+
+```text
+data/forecast_outputs/top_forecasted_opportunities.csv
+```
+
+## Dashboards
+
+The project includes two dashboard layers.
+
+### Grafana Professional Dashboard
+
+Grafana is the final professional dashboard layer. It uses a SQLite database generated from forecasting, clustering, and classification outputs.
+
+Create or refresh the database:
 
 ```powershell
 python grafana/export_to_sqlite.py
 ```
 
-SQLite database location:
+SQLite output:
 
 ```text
 data/grafana/export_opportunities.db
 ```
 
-Main Grafana tables:
+The exporter imports 18 tables and creates helper views for Grafana panels, including:
 
 - `top_forecasted_opportunities`
 - `priority_countries`
@@ -70,83 +271,193 @@ Main Grafana tables:
 - `product_clusters`
 - `sector_clusters`
 - `cluster_priority_market_ranking`
+- `cross_cluster_opportunity`
 - `classification_model_comparison`
 - `classification_predictions_2023`
 - `classification_top_export_opportunities`
 - `classification_opportunities_by_country`
 - `classification_opportunities_by_product`
 - `classification_feature_importance`
+- `vw_cluster_best_models`
+- `vw_country_cluster_summary`
+- `vw_product_cluster_summary`
+- `vw_sector_cluster_summary`
+- `vw_classification_best_model`
+- `vw_classification_label_counts`
 
-## Run Grafana With Docker
-
-From the project root:
+Start Grafana with Docker:
 
 ```powershell
 docker run -d --name grafana-export-dashboard -p 3000:3000 -e "GF_INSTALL_PLUGINS=frser-sqlite-datasource" -v "${PWD}/data/grafana:/var/lib/grafana/export_data" grafana/grafana
 ```
 
-Open Grafana:
+Open:
 
 ```text
 http://localhost:3000
 ```
 
-SQLite database path inside Docker:
+SQLite path inside the Grafana container:
 
 ```text
 /var/lib/grafana/export_data/export_opportunities.db
 ```
 
-Use this path when configuring the SQLite data source in Grafana.
+Detailed Grafana setup and SQL panel queries are in:
 
-Recommended Grafana panels:
+```text
+grafana/README.md
+```
 
-- Ranked opportunities KPI
-- Countries analyzed KPI
-- Products analyzed KPI
-- Top opportunities by score
-- Top forecasted opportunities table
-- Priority international markets
-- Priority products
-- Forecasted demand by year
-- Forecast model performance
-- Best forecasting model
-- Cluster model quality
-- Country/product/sector cluster summaries
-- Cluster priority markets
-- Classification best model
-- Classification model comparison
-- Predicted opportunity classes
-- Classified top opportunities
-- Classification feature importance
+### Streamlit Backup Dashboard
 
-Detailed Grafana setup instructions are in:
+Streamlit is kept as a backup/live Python dashboard. It reads the same saved outputs directly and includes panels for forecasting, EDA context, clustering, and classification.
 
-- `grafana/README.md`
-
-## Streamlit Backup Dashboard
-
-The Streamlit dashboard is not deleted. It remains available as a backup/live Python dashboard:
+Run:
 
 ```powershell
 streamlit run dashboard/app.py
 ```
 
-If using the project virtual environment from the parent folder:
+If using the virtual environment from the parent project folder:
 
 ```powershell
 ..\.venv\Scripts\streamlit.exe run dashboard/app.py
 ```
 
-Streamlit reads the same forecast, clustering, and classification CSV files and is useful if Docker, Grafana, or the SQLite plugin setup fails.
+The Streamlit dashboard includes:
 
-Dashboard-specific Streamlit instructions are in:
+- Executive summary.
+- Forecast opportunity explorer.
+- Priority markets.
+- Priority products.
+- Demand and trade flows.
+- Predicted growth and market potential.
+- Historical vs forecasted indicators.
+- Forecast model performance.
+- Historical EDA context.
+- Sector-level demand and opportunity analysis.
+- Clustering-based market segmentation.
+- Classification-based opportunity ranking.
+- Interpretation guide.
 
-- `dashboard/README.md`
+Detailed Streamlit instructions are in:
 
-## Documentation
+```text
+dashboard/README.md
+```
 
-- `docs/forecasting_dashboard_explanation.md`
-- `docs/forecasting_dashboard_presentation_script.md`
-- `grafana/README.md`
-- `dashboard/README.md`
+## Final Report
+
+The checked and updated project report is:
+
+```text
+ML_Report_Algerian_Export_Opportunities_forecasting_dashboard_checked.docx
+```
+
+This report includes:
+
+- clustering results and selected graphs,
+- classification results and selected graphs,
+- forecasting results, model justification, and selected graphs,
+- corrected dashboard architecture,
+- Grafana + SQLite explanation,
+- Streamlit backup dashboard explanation.
+
+## Reproducibility Checklist
+
+Use this checklist before presenting or submitting:
+
+1. Confirm dependencies are installed:
+
+   ```powershell
+   pip install -r requirements.txt
+   ```
+
+2. Confirm model-output folders exist:
+
+   ```text
+   data/clustering_outputs/
+   data/classification_outputs/
+   data/forecast_outputs/
+   ```
+
+3. Re-run forecasting if forecast outputs changed:
+
+   ```powershell
+   python forecasting_pipeline.py
+   ```
+
+4. Rebuild the Grafana SQLite database:
+
+   ```powershell
+   python grafana/export_to_sqlite.py
+   ```
+
+5. Start Grafana or Streamlit:
+
+   ```powershell
+   streamlit run dashboard/app.py
+   ```
+
+6. Open the final report:
+
+   ```text
+   ML_Report_Algerian_Export_Opportunities_forecasting_dashboard_checked.docx
+   ```
+
+## Examiner Notes
+
+### Why forecast partner import demand instead of Algerian exports"
+
+Partner import demand measures market opportunity. Algerian exports reflect current supply capacity and historical market access, which may hide attractive under-exploited markets.
+
+### Why Random Forest for forecasting"
+
+Random Forest is robust on noisy, short annual panel series and achieved the best RMSE in the current time-based evaluation. It also beat the naive last-value baseline, showing value beyond persistence.
+
+### Why include naive baselines"
+
+Naive baselines are essential because any advanced model should outperform simple rules before being trusted. The pipeline compares Random Forest against naive last-value, moving average, trend-adjusted naive, smoothing, and other ML regressors.
+
+### Why not ARIMA as the main model"
+
+ARIMA is included as an optional comparator when `statsmodels` is installed. It is not the main strategy because each annual country-product series has limited history, while panel machine learning can learn across many related series.
+
+### Is the dashboard connected to all model outputs"
+
+Yes. The current dashboard data layer includes forecasting, clustering, and classification outputs. Grafana reads them through `data/grafana/export_opportunities.db`; Streamlit reads the CSV outputs directly.
+
+## Limitations
+
+- The opportunity ranking is a decision-support tool, not a guarantee of future export revenue.
+- Supply-side feasibility is not fully modeled; some globally attractive products may not be realistic for Algeria to produce or export immediately.
+- Tariffs, non-tariff barriers, logistics constraints, and firm-level capacity are not yet included.
+- Forecast reliability decreases as the horizon increases.
+- Grafana refresh currently requires rerunning the SQLite export script after model outputs change.
+
+## Future Work
+
+- Add supply-side feasibility filters based on Algerian production/export capacity.
+- Add tariff, non-tariff barrier, trade agreement, and logistics indicators.
+- Automate annual retraining and SQLite dashboard refresh.
+- Provision Grafana dashboards as reusable JSON/config files.
+- Extend forecasting comparison with tuned XGBoost and additional probabilistic forecasting methods.
+
+## Key Files
+
+| File | Description |
+|---|---|
+| `build_master_df.py` | Script version of master dataset creation. |
+| `forecasting_pipeline.py` | End-to-end forecasting pipeline and forecast-output generation. |
+| `notebooks/01_build_master_dataset.ipynb` | Data integration and feature engineering notebook. |
+| `notebooks/02_data_cleaning_eda.ipynb` | Data cleaning, EDA, and EDA-output export notebook. |
+| `notebooks/04_classification.ipynb` | Classification modeling notebook. |
+| `notebooks/05_clustering.ipynb` | Clustering notebook. |
+| `notebooks/07_forecasting.ipynb` | Forecasting notebook with model justification. |
+| `grafana/export_to_sqlite.py` | Converts model outputs into Grafana SQLite database. |
+| `grafana/README.md` | Grafana setup and SQL panel queries. |
+| `dashboard/app.py` | Streamlit backup dashboard. |
+| `dashboard/README.md` | Streamlit dashboard documentation. |
+| `ML_Report_Algerian_Export_Opportunities_forecasting_dashboard_checked.docx` | Final checked report. |
+
