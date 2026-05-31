@@ -21,6 +21,8 @@ APP_TITLE = "Forecasting Global Export Opportunities for Algerian Exporters"
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 FORECAST_DIR = PROJECT_ROOT / "data" / "forecast_outputs"
 EDA_DIR = PROJECT_ROOT / "data" / "eda_outputs"
+CLUSTERING_DIR = PROJECT_ROOT / "data" / "clustering_outputs"
+CLASSIFICATION_DIR = PROJECT_ROOT / "data" / "classification_outputs"
 
 FORECAST_FILES = {
     "opportunities": FORECAST_DIR / "top_forecasted_opportunities.csv",
@@ -41,6 +43,39 @@ EDA_FILES = {
     "top_export_products": EDA_DIR / "top_export_products.csv",
     "heatmap_demand": EDA_DIR / "country_product_heatmap_demand.csv",
     "heatmap_log": EDA_DIR / "country_product_heatmap_log.csv",
+}
+
+CLUSTERING_FILES = {
+    "evaluation": CLUSTERING_DIR / "cluster_evaluation_summary.csv",
+    "country_clusters": CLUSTERING_DIR / "country_clusters.csv",
+    "product_clusters": CLUSTERING_DIR / "product_clusters.csv",
+    "sector_clusters": CLUSTERING_DIR / "sector_clusters.csv",
+    "priority_markets": CLUSTERING_DIR / "priority_market_ranking.csv",
+    "cross_cluster": CLUSTERING_DIR / "cross_cluster_opportunity.csv",
+}
+
+CLASSIFICATION_FILES = {
+    "model_comparison": CLASSIFICATION_DIR / "model_comparison.csv",
+    "predictions": CLASSIFICATION_DIR / "predictions_2023.csv",
+    "top_opportunities": CLASSIFICATION_DIR / "top_export_opportunities.csv",
+    "country_opportunities": CLASSIFICATION_DIR / "opp_by_country_predicted.csv",
+    "product_opportunities": CLASSIFICATION_DIR / "opp_by_product_predicted.csv",
+    "feature_importance": CLASSIFICATION_DIR / "feature_importance_consensus.csv",
+}
+
+CLUSTERING_IMAGES = {
+    "Country PCA": CLUSTERING_DIR / "country_kmeans_pca.png",
+    "Product PCA": CLUSTERING_DIR / "product_kmeans_pca.png",
+    "Sector PCA": CLUSTERING_DIR / "sector_kmeans_pca.png",
+    "Priority Markets": CLUSTERING_DIR / "country_priority_ranking.png",
+    "Cross-Cluster Opportunity": CLUSTERING_DIR / "cross_cluster_opportunity.png",
+}
+
+CLASSIFICATION_IMAGES = {
+    "Model Comparison": CLASSIFICATION_DIR / "model_comparison_bar.png",
+    "Confusion Matrices": CLASSIFICATION_DIR / "all_confusion_matrices.png",
+    "Feature Importance": CLASSIFICATION_DIR / "feature_importance_consensus.png",
+    "Opportunity Ranking": CLASSIFICATION_DIR / "top_opportunities_ranking.png",
 }
 
 HS_SECTOR_MAP: dict[str, str] = {
@@ -164,6 +199,14 @@ def load_optional_eda() -> dict[str, pd.DataFrame]:
     }
 
 
+def load_optional_outputs(files: dict[str, Path]) -> dict[str, pd.DataFrame]:
+    return {
+        name: df
+        for name, path in files.items()
+        if (df := safe_load_csv(str(path))) is not None
+    }
+
+
 def has_cols(df: pd.DataFrame | None, cols: Iterable[str]) -> bool:
     return df is not None and all(col in df.columns for col in cols)
 
@@ -201,10 +244,13 @@ def fmt_number(value: float | int | None) -> str:
     return f"{value:.2f}"
 
 
-def format_table(df: pd.DataFrame, currency_cols: Iterable[str] = (), pct_cols: Iterable[str] = ()) -> pd.io.formats.style.Styler:
+def format_table(df: pd.DataFrame, currency_cols: Iterable[str] = (), pct_cols: Iterable[str] = ()):
     fmt = {col: "{:,.2f}" for col in currency_cols if col in df.columns}
     fmt.update({col: "{:,.2f}%" for col in pct_cols if col in df.columns})
-    return df.style.format(fmt)
+    try:
+        return df.style.format(fmt)
+    except AttributeError:
+        return df
 
 
 def bar_chart(df: pd.DataFrame, x: str, y: str, title: str, color: str | None = None, orientation: str = "v") -> None:
@@ -258,9 +304,30 @@ def scatter_chart(df: pd.DataFrame, x: str, y: str, size: str | None, color: str
         st.scatter_chart(df[[x, y]])
 
 
+def show_output_images(images: dict[str, Path], key: str) -> None:
+    available = {label: path for label, path in images.items() if path.exists()}
+    if not available:
+        return
+    selected = st.selectbox("Saved diagnostic plot", list(available.keys()), key=f"{key}_image_select")
+    st.image(str(available[selected]), caption=selected, use_container_width=True)
+
+
 def normalize_filter_values(series: pd.Series) -> list:
     values = series.dropna().unique().tolist()
     return sorted(values, key=lambda item: str(item))
+
+
+def filter_like_dashboard(df: pd.DataFrame, filtered_opps: pd.DataFrame) -> pd.DataFrame:
+    if df is None or df.empty:
+        return df
+    filtered = df.copy()
+    if "country_name" in filtered.columns and "country_name" in filtered_opps.columns:
+        countries = set(filtered_opps["country_name"].dropna().astype(str))
+        filtered = filtered[filtered["country_name"].astype(str).isin(countries)]
+    if "k" in filtered.columns and "k" in filtered_opps.columns:
+        products = set(filtered_opps["k"].dropna().astype(str))
+        filtered = filtered[filtered["k"].astype(str).isin(products)]
+    return filtered
 
 
 def apply_sidebar_filters(opps: pd.DataFrame, forecasts: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
@@ -686,8 +753,164 @@ def sector_analysis(opps: pd.DataFrame) -> None:
     st.dataframe(format_table(sector_agg, currency_cols=["total_forecasted_value", "total_predicted_growth"]), use_container_width=True, height=320)
 
 
+def clustering_analysis(clustering: dict[str, pd.DataFrame]) -> None:
+    st.header("11. Clustering-Based Market Segmentation")
+    st.markdown(
+        "<p class='section-note'>These panels read data/clustering_outputs to show country, product, and sector segments, cluster quality, and priority market groups.</p>",
+        unsafe_allow_html=True,
+    )
+    if not clustering:
+        st.info("No clustering outputs found in data/clustering_outputs.")
+        return
+
+    evaluation = clustering.get("evaluation")
+    if evaluation is not None and not evaluation.empty:
+        eval_table = evaluation.copy()
+        if "Silhouette" in eval_table.columns:
+            eval_table["Silhouette"] = pd.to_numeric(eval_table["Silhouette"], errors="coerce")
+            best = eval_table.dropna(subset=["Silhouette"]).sort_values("Silhouette", ascending=False).head(1)
+            if not best.empty:
+                st.success(f"Best clustering quality by Silhouette: {best.iloc[0].get('Task')} - {best.iloc[0].get('Model')}")
+        st.dataframe(format_table(eval_table), use_container_width=True, height=250)
+
+    cols = st.columns(2)
+    with cols[0]:
+        priority = clustering.get("priority_markets")
+        if priority is not None and not priority.empty and has_cols(priority, ["Country", "Priority score"]):
+            priority = priority.copy()
+            priority["Priority score"] = pd.to_numeric(priority["Priority score"], errors="coerce")
+            top = priority.dropna(subset=["Priority score"]).nlargest(15, "Priority score")
+            bar_chart(top.sort_values("Priority score"), "Priority score", "Country", "Cluster Priority Market Ranking", orientation="h")
+        else:
+            st.info("priority_market_ranking.csv is not available.")
+    with cols[1]:
+        country_clusters = clustering.get("country_clusters")
+        if country_clusters is not None and "cluster_kmeans" in country_clusters.columns:
+            summary_cols = {
+                "Countries": ("country_name", "count") if "country_name" in country_clusters.columns else ("j", "count"),
+            }
+            if "opportunity_rate" in country_clusters.columns:
+                summary_cols["Avg opportunity rate"] = ("opportunity_rate", "mean")
+            if "log_total_partner_import" in country_clusters.columns:
+                summary_cols["Avg import scale log"] = ("log_total_partner_import", "mean")
+            country_summary = (
+                country_clusters.groupby("cluster_kmeans", observed=True)
+                .agg(**summary_cols)
+                .reset_index()
+                .sort_values("cluster_kmeans")
+            )
+            st.dataframe(format_table(country_summary), use_container_width=True, height=420)
+        else:
+            st.info("country_clusters.csv is not available.")
+
+    cols = st.columns(2)
+    with cols[0]:
+        product_clusters = clustering.get("product_clusters")
+        if product_clusters is not None and "cluster_kmeans" in product_clusters.columns:
+            product_summary = product_clusters.groupby("cluster_kmeans", observed=True).size().reset_index(name="Products")
+            bar_chart(product_summary, "cluster_kmeans", "Products", "Products per Cluster")
+    with cols[1]:
+        sector_clusters = clustering.get("sector_clusters")
+        if sector_clusters is not None and "cluster_kmeans" in sector_clusters.columns:
+            sector_summary = sector_clusters.groupby("cluster_kmeans", observed=True).size().reset_index(name="Sectors")
+            bar_chart(sector_summary, "cluster_kmeans", "Sectors", "Sectors per Cluster")
+
+    cross_cluster = clustering.get("cross_cluster")
+    if cross_cluster is not None and not cross_cluster.empty and PLOTLY_AVAILABLE:
+        matrix = cross_cluster.set_index(cross_cluster.columns[0])
+        fig = px.imshow(matrix, aspect="auto", title="Country-Product Cluster Opportunity Matrix")
+        fig.update_layout(height=420, margin=dict(l=10, r=10, t=55, b=10))
+        st.plotly_chart(fig, use_container_width=True)
+
+    with st.expander("Saved clustering diagnostic plots"):
+        show_output_images(CLUSTERING_IMAGES, "clustering")
+
+
+def classification_analysis(classification: dict[str, pd.DataFrame], filtered_opps: pd.DataFrame) -> None:
+    st.header("12. Classification-Based Opportunity Ranking")
+    st.markdown(
+        "<p class='section-note'>These panels read data/classification_outputs to show High / Medium / Low opportunity predictions, classifier performance, and feature importance.</p>",
+        unsafe_allow_html=True,
+    )
+    if not classification:
+        st.info("No classification outputs found in data/classification_outputs.")
+        return
+
+    model_comparison = classification.get("model_comparison")
+    if model_comparison is not None and not model_comparison.empty:
+        metrics = model_comparison.copy()
+        for col in ["accuracy", "macro_precision", "macro_recall", "macro_f1"]:
+            if col in metrics.columns:
+                metrics[col] = pd.to_numeric(metrics[col], errors="coerce")
+        ranking_metric = "macro_f1" if "macro_f1" in metrics.columns else "accuracy" if "accuracy" in metrics.columns else None
+        if ranking_metric:
+            best = metrics.dropna(subset=[ranking_metric]).sort_values(ranking_metric, ascending=False).head(1)
+            if not best.empty:
+                st.success(f"Best classifier by {ranking_metric}: {best.iloc[0].get('model')}")
+            cols = st.columns(2)
+            with cols[0]:
+                bar_chart(metrics.sort_values(ranking_metric), "model", ranking_metric, f"Classification {ranking_metric} by Model")
+            with cols[1]:
+                if "accuracy" in metrics.columns:
+                    bar_chart(metrics.sort_values("accuracy"), "model", "accuracy", "Classification Accuracy by Model")
+        st.dataframe(format_table(metrics), use_container_width=True, height=230)
+
+    predictions = filter_like_dashboard(classification.get("predictions"), filtered_opps)
+    if predictions is not None and not predictions.empty and "predicted_label" in predictions.columns:
+        label_counts = predictions["predicted_label"].value_counts().rename_axis("Predicted label").reset_index(name="Rows")
+        bar_chart(label_counts, "Predicted label", "Rows", "Predicted Opportunity Classes")
+
+    cols = st.columns(2)
+    with cols[0]:
+        by_country = classification.get("country_opportunities")
+        if by_country is not None and has_cols(by_country, ["country_name", "n_high_opportunities"]):
+            by_country = by_country.copy()
+            by_country["n_high_opportunities"] = pd.to_numeric(by_country["n_high_opportunities"], errors="coerce")
+            top = by_country.dropna(subset=["n_high_opportunities"]).nlargest(15, "n_high_opportunities")
+            bar_chart(top.sort_values("n_high_opportunities"), "n_high_opportunities", "country_name", "High Opportunities by Country", orientation="h")
+    with cols[1]:
+        by_product = classification.get("product_opportunities")
+        if by_product is not None and has_cols(by_product, ["description_short", "n_high_opportunities"]):
+            by_product = by_product.copy()
+            by_product["n_high_opportunities"] = pd.to_numeric(by_product["n_high_opportunities"], errors="coerce")
+            top = by_product.dropna(subset=["n_high_opportunities"]).nlargest(15, "n_high_opportunities")
+            top["label"] = top["description_short"].astype(str).str.slice(0, 50)
+            bar_chart(top.sort_values("n_high_opportunities"), "n_high_opportunities", "label", "High Opportunities by Product", orientation="h")
+
+    feature_importance = classification.get("feature_importance")
+    if feature_importance is not None and has_cols(feature_importance, ["feature", "avg_rank"]):
+        importance = feature_importance.copy()
+        importance["avg_rank"] = pd.to_numeric(importance["avg_rank"], errors="coerce")
+        top_features = importance.dropna(subset=["avg_rank"]).sort_values("avg_rank").head(15).sort_values("avg_rank", ascending=False)
+        bar_chart(top_features, "avg_rank", "feature", "Consensus Feature Importance (Lower Rank Is Better)", orientation="h")
+
+    top_opportunities = filter_like_dashboard(classification.get("top_opportunities"), filtered_opps)
+    if top_opportunities is not None and not top_opportunities.empty:
+        top_opportunities = top_opportunities.drop(columns=[col for col in top_opportunities.columns if col.startswith("Unnamed")], errors="ignore")
+        table_cols = [
+            "country_name",
+            "description_short",
+            "partner_import_v",
+            "global_demand_rank",
+            "world_demand_growth",
+            "market_penetration",
+            "rca",
+            "dist_km",
+            "predicted_label",
+        ]
+        table = top_opportunities[[col for col in table_cols if col in top_opportunities.columns]].head(50)
+        st.dataframe(
+            format_table(table, currency_cols=["partner_import_v"], pct_cols=["world_demand_growth"]),
+            use_container_width=True,
+            height=420,
+        )
+
+    with st.expander("Saved classification diagnostic plots"):
+        show_output_images(CLASSIFICATION_IMAGES, "classification")
+
+
 def interpretation_section(non_hydrocarbon_default: bool = False) -> None:
-    st.header("11. Interpretation for CACI, Exporters, and Policymakers")
+    st.header("13. Interpretation for CACI, Exporters, and Policymakers")
     if non_hydrocarbon_default:
         st.info("The current default view focuses on non-hydrocarbon diversification opportunities.")
     st.markdown(
@@ -712,6 +935,8 @@ def main() -> None:
     if data is None:
         return
     eda = load_optional_eda()
+    clustering = load_optional_outputs(CLUSTERING_FILES)
+    classification = load_optional_outputs(CLASSIFICATION_FILES)
 
     opportunities = data["opportunities"]
     countries = data["countries"]
@@ -754,6 +979,10 @@ def main() -> None:
     historical_eda_context(eda)
     st.divider()
     sector_analysis(filtered_opps)
+    st.divider()
+    clustering_analysis(clustering)
+    st.divider()
+    classification_analysis(classification, filtered_opps)
     st.divider()
     interpretation_section(non_hydrocarbon_default)
 

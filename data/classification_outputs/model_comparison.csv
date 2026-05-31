@@ -1,0 +1,5 @@
+model,accuracy,macro_precision,macro_recall,macro_f1
+Logistic Regression,0.6524,0.5366,0.7384,0.5595
+Random Forest,0.91,0.8074,0.933,0.8591
+XGBoost,0.9062,0.7976,0.9305,0.8511
+LightGBM,0.9468,0.9145,0.9029,0.9083

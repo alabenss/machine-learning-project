@@ -47,6 +47,24 @@ Optional historical context files:
 
 The `eda_outputs` files are used only for historical context, overview charts, and interpretation support. Forecasting results come from `data/forecast_outputs/`.
 
+Optional clustering files:
+
+- `data/clustering_outputs/cluster_evaluation_summary.csv`
+- `data/clustering_outputs/country_clusters.csv`
+- `data/clustering_outputs/product_clusters.csv`
+- `data/clustering_outputs/sector_clusters.csv`
+- `data/clustering_outputs/priority_market_ranking.csv`
+- `data/clustering_outputs/cross_cluster_opportunity.csv`
+
+Optional classification files:
+
+- `data/classification_outputs/model_comparison.csv`
+- `data/classification_outputs/predictions_2023.csv`
+- `data/classification_outputs/top_export_opportunities.csv`
+- `data/classification_outputs/opp_by_country_predicted.csv`
+- `data/classification_outputs/opp_by_product_predicted.csv`
+- `data/classification_outputs/feature_importance_consensus.csv`
+
 ## Dashboard Sections
 
 1. **Executive Summary**  
@@ -79,7 +97,13 @@ The `eda_outputs` files are used only for historical context, overview charts, a
 10. **Sector-Level Demand and Opportunity Analysis**  
     Maps HS product codes to broad trade sectors and shows which sectors carry the most forecasted demand, predicted growth, and opportunity score.
 
-11. **Interpretation for CACI, Exporters, and Policymakers**  
+11. **Clustering-Based Market Segmentation**  
+    Uses `data/clustering_outputs` to show cluster quality, country/product/sector segments, priority market groups, and saved clustering diagnostic plots.
+
+12. **Classification-Based Opportunity Ranking**  
+    Uses `data/classification_outputs` to show High / Medium / Low opportunity predictions, model comparison, feature importance, and top classified opportunities.
+
+13. **Interpretation for CACI, Exporters, and Policymakers**  
     Explains how to interpret opportunity scores, low market penetration, RCA, and forecast limitations.
 
 ## Project Dashboard Setup
@@ -95,4 +119,4 @@ The `eda_outputs` files are used only for historical context, overview charts, a
 - It depends on the saved forecasting CSVs being generated first.
 - Optional EDA files are loaded only if available; missing optional files do not stop the app.
 - Sector filtering appears only if a sector column exists in the forecast opportunity file.
-- The opportunity score is forecast-based and can later be enriched with clustering, classification, tariff, logistics, or policy indicators.
+- Forecasting, clustering, and classification outputs are shown as separate decision-support signals. Tariff, logistics, or policy indicators can still be added later.

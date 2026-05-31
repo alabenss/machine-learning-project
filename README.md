@@ -2,9 +2,9 @@
 
 ## Forecasting And Dashboard
 
-This part of the project forecasts future partner-market demand for Algerian export opportunities and presents the results in dashboards.
+This part of the project forecasts future partner-market demand for Algerian export opportunities and presents the forecasting, clustering, and classification results in dashboards.
 
-Grafana is the professional dashboard used for the final demo because it satisfies the project PDF requirement for a professional visualization dashboard. Streamlit is kept as a backup/live Python dashboard that can open the same forecast outputs if the Grafana setup fails.
+Grafana is the professional dashboard used for the final demo because it satisfies the project PDF requirement for a professional visualization dashboard. Streamlit is kept as a backup/live Python dashboard that can open the same forecast, clustering, and classification outputs if the Grafana setup fails.
 
 ## Main Files
 
@@ -41,9 +41,9 @@ Forecast outputs are saved in:
 - `data/forecast_outputs/priority_products.csv`
 - `data/forecast_outputs/plots/`
 
-## Convert Forecast CSV Files To SQLite
+## Convert Dashboard CSV Files To SQLite
 
-Grafana reads a SQLite database created from the forecast CSV outputs.
+Grafana reads a SQLite database created from the forecast, clustering, and classification CSV outputs.
 
 Run:
 
@@ -65,6 +65,17 @@ Main Grafana tables:
 - `final_forecasts`
 - `forecast_model_metrics`
 - `historical_forecast_comparison`
+- `cluster_evaluation_summary`
+- `country_clusters`
+- `product_clusters`
+- `sector_clusters`
+- `cluster_priority_market_ranking`
+- `classification_model_comparison`
+- `classification_predictions_2023`
+- `classification_top_export_opportunities`
+- `classification_opportunities_by_country`
+- `classification_opportunities_by_product`
+- `classification_feature_importance`
 
 ## Run Grafana With Docker
 
@@ -100,6 +111,14 @@ Recommended Grafana panels:
 - Forecasted demand by year
 - Forecast model performance
 - Best forecasting model
+- Cluster model quality
+- Country/product/sector cluster summaries
+- Cluster priority markets
+- Classification best model
+- Classification model comparison
+- Predicted opportunity classes
+- Classified top opportunities
+- Classification feature importance
 
 Detailed Grafana setup instructions are in:
 
@@ -119,7 +138,7 @@ If using the project virtual environment from the parent folder:
 ..\.venv\Scripts\streamlit.exe run dashboard/app.py
 ```
 
-Streamlit reads the same forecast CSV files and is useful if Docker, Grafana, or the SQLite plugin setup fails.
+Streamlit reads the same forecast, clustering, and classification CSV files and is useful if Docker, Grafana, or the SQLite plugin setup fails.
 
 Dashboard-specific Streamlit instructions are in:
 

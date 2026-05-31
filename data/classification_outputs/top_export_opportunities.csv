@@ -1,0 +1,31 @@
+,country_name,description_short,partner_import_v,global_demand_rank,world_demand_growth,market_penetration,rca,dist_km,predicted_label
+1,Switzerland,"Metals: gold, non-monetary, unwrought (but not powder)",100491728.489,0.9995192845733587,0.10602865808780226,0.0,,1183.855,High Opportunity
+2,USA,Vehicles: spark-ignition internal combustion reciprocating p,95954736.52,0.9983645501622732,0.16661999955130957,0.0,0.0001679715272888296,6471.879,High Opportunity
+3,Japan,Oils: petroleum oils and oils obtained from bituminous miner,80447235.375,0.9999041960437205,-0.14853749284003537,0.0,4.477485097489426,10810.22,High Opportunity
+4,"China, Hong Kong SAR",Electronic integrated circuits: n.e.c. in heading no. 8542,73976459.685,0.9985570058974541,-0.11436562950309515,0.0,0.00015457184563047468,10272.68,High Opportunity
+5,USA,"Blood, human or animal, antisera, other blood fractions and ",73414195.641,0.9981720944270923,0.1333679822130316,0.0,6.864140758500904e-07,6471.879,High Opportunity
+6,United Arab Emirates,"Metals: gold, non-monetary, unwrought (but not powder)",67677931.367,0.9995192845733587,0.10602865808780226,0.0,,5048.766,High Opportunity
+7,China,"Metals: gold, non-monetary, unwrought (but not powder)",67039061.993,0.9995192845733587,0.10602865808780226,0.0,,9117.676,High Opportunity
+8,USA,Medicaments: consisting of mixed or unmixed products n.e.c. ,64312386.365,0.9991343731029969,-0.003756866926619584,0.0,0.0038597822723884733,6471.879,High Opportunity
+9,USA,Telephones for cellular networks or for other wireless netwo,62679106.510000005,0.9993268288381778,0.08608585548829306,0.0,0.0006325295349067288,6471.879,High Opportunity
+10,"China, Hong Kong SAR","Electronic integrated circuits: processors and controllers, ",62526996.69100001,0.998941917367816,-0.13723118535403145,0.0,0.0014564602011438417,10272.68,High Opportunity
+11,China,Copper ores and concentrates,58920062.507,0.9949003469290169,0.06392669190864941,0.0,3.156534488379897e-07,9117.676,High Opportunity
+12,China,"Soya beans: other than seed, whether or not broken",56795430.754,0.9945154354586551,-0.0003704024858217636,0.0,1.4519592151066263e-05,9117.676,High Opportunity
+13,"China, Hong Kong SAR","Metals: gold, non-monetary, unwrought (but not powder)",54356936.535000004,0.9995192845733587,0.10602865808780226,0.0,,10272.68,High Opportunity
+14,USA,Communication apparatus (excluding telephone sets or base st,50708360.498,0.9975947272215496,0.021958729496753815,0.0,0.0011653840293270972,6471.879,High Opportunity
+15,China,Electronic integrated circuits: memories,50040819.658,0.9972098157511878,-0.1800817727200471,0.0,,9117.676,High Opportunity
+16,"China, Hong Kong SAR",Telephones for cellular networks or for other wireless netwo,46422080.378000006,0.9993268288381778,0.08608585548829306,0.0,0.0006325295349067288,10272.68,High Opportunity
+17,USA,"Automatic data processing machines: portable, weighing not m",45561777.25000001,0.9974022714863687,-0.17794062239290886,0.0,4.579819987309988e-05,6471.879,High Opportunity
+18,USA,Vehicles: for transport of persons (other than those of head,45510738.456,0.9987494616326351,0.4469830025027972,0.0,,6471.879,High Opportunity
+19,United Kingdom,"Metals: gold, semi-manufactured",43461200.611999996,0.9960550813401023,0.0640752063314789,0.0,0.008472153746123399,1651.441,High Opportunity
+20,India,"Metals: gold, non-monetary, unwrought (but not powder)",41405614.799,0.9995192845733587,0.10602865808780226,0.0,,6837.094,High Opportunity
+21,Japan,"Coal: bituminous, whether or not pulverised, but not agglome",37939175.767,0.9968249042808259,-0.1892685919604734,0.0,,10810.22,High Opportunity
+22,Australia,"Petroleum oils and oils from bituminous minerals, not crude:",37176861.18,0.9997117403085396,-0.10461886193920378,0.0,3.330631776605527,17139.16,High Opportunity
+23,USA,Units of automatic data processing machines: processing unit,36561527.624,0.9943229797234742,-0.06309014990470807,0.0,0.00030882524913522914,6471.879,High Opportunity
+24,Germany,Petroleum gases and other gaseous hydrocarbons: in gaseous s,35131267.892,0.9977871829567305,-0.47352043272345856,0.0,28.481715778915014,1658.841,High Opportunity
+25,India,"Coal: (other than anthracite and bituminous), whether or not",34063250.017,0.9910512322253987,-0.27179400660463127,0.0,,6837.094,High Opportunity
+26,"China, Hong Kong SAR",Electronic integrated circuits: memories,33214031.291000005,0.9972098157511878,-0.1800817727200471,0.0,,10272.68,High Opportunity
+27,China,"Coal: bituminous, whether or not pulverised, but not agglome",33204486.48,0.9968249042808259,-0.1892685919604734,0.0,,9117.676,High Opportunity
+28,Mexico,"Petroleum oils and oils from bituminous minerals, not crude:",32829970.615,0.9997117403085396,-0.10461886193920378,0.0,3.330631776605527,9760.504,High Opportunity
+29,Singapore,Electronic integrated circuits: n.e.c. in heading no. 8542,31298268.378,0.9985570058974541,-0.11436562950309515,0.0,0.00015457184563047468,10894.61,High Opportunity
+30,Singapore,"Electronic integrated circuits: processors and controllers, ",30944193.1,0.998941917367816,-0.13723118535403145,0.0,0.0014564602011438417,10894.61,High Opportunity
