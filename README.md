@@ -62,7 +62,7 @@ Run the project in notebook order when rebuilding from raw or intermediate data:
 | 2 | `notebooks/02_data_cleaning_eda.ipynb` | Clean data, create train/validation/test splits, export EDA summaries | `data/modeling/`, `data/eda_outputs/` |
 | 3 | `notebooks/04_classification.ipynb` | Train opportunity classifiers and rank High Opportunity pairs | `data/classification_outputs/` |
 | 4 | `notebooks/05_clustering.ipynb` | Segment countries, products, and sectors | `data/clustering_outputs/` |
-| 5 | `notebooks/07_forecasting.ipynb` or `forecasting_pipeline.py` | Forecast future partner import demand and score forecast opportunities | `data/forecast_outputs/` |
+| 5 | `notebooks/07_forecasting.ipynb` | Self-contained forecasting notebook; forecasts future partner import demand and scores forecast opportunities | `data/forecast_outputs/` |
 | 6 | `grafana/export_to_sqlite.py` | Convert model outputs into a Grafana-ready SQLite database | `data/grafana/export_opportunities.db` |
 | 7 | `dashboard/app.py` | Launch backup Streamlit dashboard | Local Streamlit app |
 
@@ -187,7 +187,13 @@ The forecasting pipeline compares:
 - Gradient Boosting regressor.
 - HistGradientBoosting regressor.
 
-Run forecasting:
+Run forecasting from the self-contained notebook:
+
+```text
+notebooks/07_forecasting.ipynb
+```
+
+Optional command-line mirror:
 
 ```powershell
 python forecasting_pipeline.py
@@ -384,6 +390,12 @@ Use this checklist before presenting or submitting:
 
 3. Re-run forecasting if forecast outputs changed:
 
+   ```text
+   notebooks/07_forecasting.ipynb
+   ```
+
+   Optional command-line mirror:
+
    ```powershell
    python forecasting_pipeline.py
    ```
@@ -449,12 +461,12 @@ Yes. The current dashboard data layer includes forecasting, clustering, and clas
 | File | Description |
 |---|---|
 | `build_master_df.py` | Script version of master dataset creation. |
-| `forecasting_pipeline.py` | End-to-end forecasting pipeline and forecast-output generation. |
+| `forecasting_pipeline.py` | Optional command-line mirror of the forecasting notebook logic. |
 | `notebooks/01_build_master_dataset.ipynb` | Data integration and feature engineering notebook. |
 | `notebooks/02_data_cleaning_eda.ipynb` | Data cleaning, EDA, and EDA-output export notebook. |
 | `notebooks/04_classification.ipynb` | Classification modeling notebook. |
 | `notebooks/05_clustering.ipynb` | Clustering notebook. |
-| `notebooks/07_forecasting.ipynb` | Forecasting notebook with model justification. |
+| `notebooks/07_forecasting.ipynb` | Self-contained forecasting notebook with implementation, model justification, results, and dashboard outputs. |
 | `grafana/export_to_sqlite.py` | Converts model outputs into Grafana SQLite database. |
 | `grafana/README.md` | Grafana setup and SQL panel queries. |
 | `dashboard/app.py` | Streamlit backup dashboard. |

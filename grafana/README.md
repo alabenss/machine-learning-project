@@ -6,7 +6,13 @@ Grafana is the dashboard used for the final demo because it satisfies the projec
 
 ## 1. Create The SQLite Database
 
-First generate or refresh the forecast CSV outputs:
+First generate or refresh the forecast CSV outputs by running the self-contained forecasting notebook:
+
+```text
+notebooks/07_forecasting.ipynb
+```
+
+Optional command-line mirror:
 
 ```powershell
 python forecasting_pipeline.py
